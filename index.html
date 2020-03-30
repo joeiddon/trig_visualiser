@@ -1,0 +1,237 @@
+<html>
+<head>
+<style>
+body {
+    font-size: 30px;
+}
+
+canvas {
+    border: 1px solid black;
+    background-color: #eee;
+    margin-bottom: 10px;
+}
+
+.flex-row {
+    height: 70%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+.flex-column {
+    margin: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+input[type='range'] {
+    margin: 10px 0 10px 0;
+    width: 100%;
+}
+
+label {
+    display: block;
+    text-align: center;
+}
+
+</style>
+</head>
+
+<body>
+<h1 style='text-align: center'>Trig Visualiser</h1>
+<div style='position: absolute; top: 10; right: 10; font-size: 9px'>made for ds</div>
+
+<div class='flex-row'>
+
+<div class='flex-column'>
+<canvas id='circle'></canvas>
+<input type='range' id='theta' min=0 value=60 max=360></input>
+<label for='theta'>𝜃 = <span id='theta_value'>60</span>°</label>
+</div>
+
+<div class='flex-column'>
+<canvas id='sin'></canvas>
+<canvas id='cos'></canvas>
+</div>
+
+</div>
+
+<script>
+'use strict';
+let canvases = {
+    circle: document.getElementById('circle'),
+    sin: document.getElementById('sin'),
+    cos: document.getElementById('cos')
+};
+
+let ctxs = {
+    circle: canvases.circle.getContext('2d'),
+    sin: canvases.sin.getContext('2d'),
+    cos: canvases.cos.getContext('2d')
+};
+
+
+let draw = {
+    circle: function(ctx, x, y, r, fill, border, arc) {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, arc || Math.PI * 2, true);
+        if (border) ctx.stroke();
+        if (fill) {
+            ctx.fillStyle = fill;
+            ctx.fill();
+        }
+    },
+    line: function(ctx, p1, p2) {
+        ctx.beginPath();
+        ctx.moveTo(...p1);
+        ctx.lineTo(...p2);
+        ctx.stroke();
+    },
+    graph: function(canvas, ctx, ylabel, graph_func, xdot, color) {
+        // graph func should produce output betwen 0 and 1
+        let xmin = -90;
+        let xmax = 450;
+
+        let xstart = canvas.width / 8;
+        let xend = canvas.width * 7 / 8;
+        let ystart = canvas.height / 6;
+        let yend = canvas.height * 5 / 6;
+
+        let getx = (x) => xstart + (x - xmin) / (xmax - xmin)  * (xend - xstart);
+        let A = (yend - ystart) / 2 - 50;
+        let gety = (x) => canvas.height/2 + -graph_func(x) * A;
+
+        // draw axis
+        draw.line(ctx, [xstart, canvas.height/2], [xend, canvas.height/2]);
+        draw.line(ctx, [getx(0), ystart], [getx(0), yend]);
+        // draw func
+        ctx.beginPath();
+        for (let x = xmin; x < xmax; x += 2) {
+            ctx.lineTo(getx(x), gety(x));
+        }
+        ctx.stroke();
+        // x dot
+        draw.circle(ctx, getx(xdot), gety(xdot), 5, color);
+        //labels
+        ctx.font = '22px Computer Modern Sans';
+        let pad = 10;
+        // y label
+        ctx.fillStyle = color;
+        ctx.textBaseline = 'bottom';
+        ctx.textAlign = 'center';
+        ctx.fillText(ylabel, getx(0), ystart - pad);
+        //x dot y axis label
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'right';
+        ctx.fillText(graph_func(xdot).toFixed(3), getx(0) - pad, gety(xdot));
+        //x label
+        ctx.fillStyle = '#000';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'start';
+        ctx.fillText('𝜃', xend + pad, canvas.height / 2);
+    }
+};
+
+(window.onresize = function() {
+    canvases.circle.width = canvases.sin.width = canvases.cos.width = innerWidth / 2.2;
+    canvases.circle.height = canvases.sin.height = canvases.cos.height = innerHeight / 2.5;
+})();
+
+function clear_canvases() {
+    ctxs.circle.clearRect(0, 0, canvases.circle.width, canvases.circle.height);
+    ctxs.sin.clearRect(0, 0, canvases.sin.width, canvases.sin.height);
+    ctxs.cos.clearRect(0, 0, canvases.cos.width, canvases.cos.height);
+}
+
+let circle_radius = canvases.circle.height / 2.4;
+let theta_input = document.getElementById('theta');
+(theta_input.oninput = function() {
+    ctxs.circle.lineWidth = ctxs.sin.lineWidth = ctxs.cos.lineWidth = 2.5;
+    let theta_deg = parseInt(theta_input.value);
+    let theta = theta_deg * Math.PI / 180;
+    document.getElementById('theta_value').innerText = theta_deg;
+    clear_canvases();
+    ctxs.circle.strokeStyle = 'black';
+    //draw circle
+    draw.circle(
+        ctxs.circle,
+        canvases.circle.width/2, canvases.circle.height/2,
+        circle_radius, false, true
+    );
+    //draw quadrants
+    let stickout = 20;
+    draw.line(ctxs.circle,
+        [canvases.circle.width/2 - circle_radius - stickout, canvases.circle.height/2],
+        [canvases.circle.width/2 + circle_radius + stickout, canvases.circle.height/2]
+    );
+    draw.line(ctxs.circle,
+        [canvases.circle.width/2, canvases.circle.height/2 - circle_radius - stickout],
+        [canvases.circle.width/2, canvases.circle.height/2 + circle_radius + stickout]
+    );
+    //draw theta line
+    draw.line(ctxs.circle,
+    [canvases.circle.width/2, canvases.circle.height/2],
+    [canvases.circle.width/2 + circle_radius * Math.cos(theta),
+    canvases.circle.height/2 + -circle_radius * Math.sin(theta)]
+    );
+    //draw theta angle
+    if (theta != 0) // draws arc incorrectly with theta = 0
+    draw.circle(
+        ctxs.circle,
+        canvases.circle.width/2, canvases.circle.height/2,
+        30, false, true, -theta
+    );
+    // write theta in the angle
+    ctxs.circle.font = '22px Computer Modern Sans';
+    ctxs.circle.fillStyle = 'black';
+    ctxs.circle.textBaseline = 'middle';
+    ctxs.circle.textAlign = 'center';
+    ctxs.circle.fillText('𝜃',
+    canvases.circle.width/2 + 40 * Math.cos(theta / 2),
+    canvases.circle.height/2 - 40 * Math.sin(theta / 2),
+    );
+
+
+    ///  draw sin and cos lines and labels
+    ctxs.circle.strokeStyle = 'red';
+    ctxs.circle.fillStyle = 'red';
+    let pad = 6;
+    //draw sin line
+    draw.line(ctxs.circle,
+    [canvases.circle.width/2 + circle_radius * Math.cos(theta), canvases.circle.height/2],
+    [canvases.circle.width/2 + circle_radius * Math.cos(theta),
+    canvases.circle.height/2 + -circle_radius * Math.sin(theta)]
+    );
+    //write sin theta
+    ctxs.circle.textBaseline = 'middle';
+    ctxs.circle.textAlign = 'start';
+    ctxs.circle.fillText('sin(𝜃)',
+    canvases.circle.width/2 + circle_radius * Math.cos(theta) + pad,
+    canvases.circle.height/2 + -circle_radius * Math.sin(theta) / 2
+    );
+    ctxs.circle.strokeStyle = 'blue';
+    ctxs.circle.fillStyle = 'blue';
+    //draw cos line
+    draw.line(ctxs.circle,
+    [canvases.circle.width/2, canvases.circle.height/2],
+    [canvases.circle.width/2 + circle_radius * Math.cos(theta),
+    canvases.circle.height/2]
+    );
+    //write cos theta
+    ctxs.circle.textBaseline = 'top';
+    ctxs.circle.textAlign = 'center';
+    ctxs.circle.fillText('cos(𝜃)',
+    canvases.circle.width/2 + circle_radius * Math.cos(theta) / 2,
+    canvases.circle.height/2 + pad
+    );
+    //draw graphs
+    draw.graph(canvases.sin, ctxs.sin,
+    'sin(𝜃)', (x)=>Math.sin(x * Math.PI / 180), theta_deg, 'red')
+    draw.graph(canvases.cos, ctxs.cos,
+    'cos(𝜃)', (x)=>Math.cos(x * Math.PI / 180), theta_deg, 'blue')
+})();
+
+</script>
+
+</body>
+</html>
