@@ -52,6 +52,7 @@ label {
 <div class='flex-column'>
 <canvas id='sin'></canvas>
 <canvas id='cos'></canvas>
+<canvas id='tan'></canvas>
 </div>
 
 </div>
@@ -61,13 +62,15 @@ label {
 let canvases = {
     circle: document.getElementById('circle'),
     sin: document.getElementById('sin'),
-    cos: document.getElementById('cos')
+    cos: document.getElementById('cos'),
+    tan: document.getElementById('tan')
 };
 
 let ctxs = {
     circle: canvases.circle.getContext('2d'),
     sin: canvases.sin.getContext('2d'),
-    cos: canvases.cos.getContext('2d')
+    cos: canvases.cos.getContext('2d'),
+    tan: canvases.tan.getContext('2d')
 };
 
 
@@ -106,8 +109,17 @@ let draw = {
         draw.line(ctx, [getx(0), ystart], [getx(0), yend]);
         // draw func
         ctx.beginPath();
+        let MAX_DIST = 2; //max dist between points - hack for discontinuities (tan)
+        let lasty = 0;
         for (let x = xmin; x < xmax; x += 2) {
-            ctx.lineTo(getx(x), gety(x));
+            if (Math.abs(graph_func(x) - lasty) > MAX_DIST) {
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(getx(x), gety(x));
+            } else {
+                ctx.lineTo(getx(x), gety(x));
+            }
+            lasty = graph_func(x);
         }
         ctx.stroke();
         // x dot
@@ -133,20 +145,24 @@ let draw = {
 };
 
 (window.onresize = function() {
-    canvases.circle.width = canvases.sin.width = canvases.cos.width = innerWidth / 2.2;
-    canvases.circle.height = canvases.sin.height = canvases.cos.height = innerHeight / 2.5;
+    canvases.circle.width = canvases.sin.width = canvases.cos.width =
+    canvases.tan.width = innerWidth / 2.2;
+    canvases.circle.height = canvases.sin.height = canvases.cos.height =
+    canvases.tan.height = innerHeight / 3.5;
 })();
 
 function clear_canvases() {
     ctxs.circle.clearRect(0, 0, canvases.circle.width, canvases.circle.height);
     ctxs.sin.clearRect(0, 0, canvases.sin.width, canvases.sin.height);
     ctxs.cos.clearRect(0, 0, canvases.cos.width, canvases.cos.height);
+    ctxs.tan.clearRect(0, 0, canvases.tan.width, canvases.tan.height);
 }
 
 let circle_radius = canvases.circle.height / 2.4;
 let theta_input = document.getElementById('theta');
 (theta_input.oninput = function() {
-    ctxs.circle.lineWidth = ctxs.sin.lineWidth = ctxs.cos.lineWidth = 2.5;
+    ctxs.circle.lineWidth = ctxs.sin.lineWidth = ctxs.cos.lineWidth =
+    ctxs.tan.lineWidth = 2.5;
     let theta_deg = parseInt(theta_input.value);
     let theta = theta_deg * Math.PI / 180;
     document.getElementById('theta_value').innerText = theta_deg;
@@ -229,6 +245,8 @@ let theta_input = document.getElementById('theta');
     'sin(𝜃)', (x)=>Math.sin(x * Math.PI / 180), theta_deg, 'red')
     draw.graph(canvases.cos, ctxs.cos,
     'cos(𝜃)', (x)=>Math.cos(x * Math.PI / 180), theta_deg, 'blue')
+    draw.graph(canvases.tan, ctxs.tan,
+    'tan(𝜃)', (x)=>Math.tan(x * Math.PI / 180), theta_deg, 'green')
 })();
 
 </script>
